@@ -1,0 +1,32 @@
+function [J,P] = dubinsTransPolyJointsCost(joint_vec,D,curvatures,taus,der_0_0,der_final_final,der_costs)
+
+N_poly = length(der_costs);
+N = N_poly-1;
+K=length(taus);
+j=zeros(1,K);
+P=zeros(K,N_poly);
+
+drho_dtheta_joints = reshape(joint_vec,D,K-1);
+for kk=1:K
+    
+    if kk>1
+        der_0 = get_poly_derivatives_from_normalized(drho_dtheta_joints(:,kk-1),curvatures(kk));
+    else
+        der_0 = der_0_0;
+    end
+    
+    if kk<K
+        der_final = get_poly_derivatives_from_normalized(drho_dtheta_joints(:,kk),curvatures(kk));
+    else
+        der_final = der_final_final;
+    end
+
+    [P(kk,:),j(kk)] = poly_opt_single(N, taus(kk), der_0, der_final, der_costs);
+end
+J=sum(j);
+
+    
+    
+    
+        
+

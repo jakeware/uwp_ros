@@ -1,0 +1,9 @@
+function line = dubinsNewLine(start_pt, end_pt)
+line.start_pt = start_pt;
+line.end_pt = end_pt;
+line.vec = end_pt - start_pt;
+line.length = norm(line.vec);
+line.unit_vec = line.vec / line.length;
+line.left_unit_vec = [-line.unit_vec(2);line.unit_vec(1)];
+line.type = 0;
+line.curvature = 0;

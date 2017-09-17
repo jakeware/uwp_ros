@@ -1,0 +1,83 @@
+%script that implements and tests formulas for polynomial derivatives 
+%and quadratic, integral cost on polynomials, see poly_path_gen.tex in
+%papers/abry for details
+
+clear all;
+home;
+
+n=5;
+
+
+p = rand(1,n)
+n=length(p) - 1;
+poly_inds = n:-1:0;
+array_inds = (n+1):-1:1;
+
+tau = rand;
+
+p2 = conv(p,p);
+p2int = polyint(p2);
+
+t = linspace(0,1,100);
+
+figure(1);clf;
+plot(t,polyval(p,t));
+hold on
+plot(t,polyval(p2,t),'r');
+legend('p','p^2');
+
+Q=zeros(n+1,n+1,n+1);
+cost_me = zeros(n+1,1);
+
+for rr=1:(n+1)
+    for ii=1:(n+1)
+        for ll=1:(n+1)
+            i=poly_inds(ii);
+            l=poly_inds(ll);
+            r=rr-1;
+            prod = 1;
+            for m=0:(r-1)
+                prod=prod*(i-m)*(l-m);
+            end
+            if (i<r || l<r)
+                Q(ii,ll,rr)=0;
+            else
+                Q(ii,ll,rr) = 2*prod*tau^(l+i+1-2*r) / (l+i+1-2*r);
+            end
+        end
+    end
+    cost_me(rr) = .5*p*Q(:,:,rr)*p';
+end
+Q
+cost_me
+
+
+p_der1=polyder(p);
+
+p_der_me = zeros(n+1);
+p_der_mat = zeros(n+1);
+p_der_mat(1,:)=p;
+
+cost_mat = zeros(n+1,1);
+for r=0:n
+    for k=r:n
+        p_der_me_r_k = p(array_inds(k+1));
+        for m=0:(r-1)
+           p_der_me_r_k=p_der_me_r_k*(k-m);
+        end
+        p_der_me(r+1,array_inds(k+1)) = p_der_me_r_k;
+    end
+    if (r>0)
+        p_der_mat(r+1,1:(n-r+1))=polyder(p_der_mat(r,1:(n-r+2)));
+    end
+    
+    p2 = conv(p_der_mat(r+1,1:(n-r+1)),p_der_mat(r+1,1:(n-r+1)));
+    p2int = polyint(p2);
+    
+    cost_mat(r+1) = polyval(p2int,tau);
+    
+end
+cost_mat
+
+p_der_mat
+p_der_me

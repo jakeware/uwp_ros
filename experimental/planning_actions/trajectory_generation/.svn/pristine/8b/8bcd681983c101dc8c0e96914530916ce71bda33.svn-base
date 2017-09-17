@@ -1,0 +1,92 @@
+function [norm_deriv_rhat,norm_deriv_that] = get_normalized_path_derivativesUR(Pderiv,curvature,length)
+D=length(Pderiv);
+
+
+if curvature>0
+    Psign = -1;
+else
+    Psign = 1;
+end
+
+Pderiv = Pderiv * Psign;
+
+P = Pderiv(1);
+if D>1
+    Pd = Pderiv(2)/length;
+else
+    Pd = 0;
+end
+if D>2
+    Pdd = Pderiv(3)/length^2;
+else
+    Pdd = 0;
+end
+if D>3
+    Pddd = Pderiv(4)/length^3;
+else
+    Pddd = 0;
+end
+
+
+
+if curvature~=0
+    R_0 = abs(1/curvature);
+    
+    %scaling corrections since the below are derived paramaterized by theta
+    %not theta/R_0
+    Pd = Pd*R_0;
+    Pdd = Pdd*R_0^2;
+    Pddd = Pddd*R_0^3;
+    
+    
+    
+    R = R_0+P;
+    L = sqrt(R^2+Pd^2);
+   
+    thetad = 1/L;
+    thetadd = -Pd*(Pdd+R)/L^4;
+    thetaddd = -(L^2*(Pdd*(Pdd+R)+Pd*(Pddd+Pd))-4*Pd^2*(Pdd+R)^2)/L^7;
+    
+    rhod_rhat = Pd;
+    rhodd_rhat = Pdd-R;
+    rhoddd_rhat = Pddd-3*Pd;
+    
+    rhod_that = R;
+    rhodd_that = 2*Pd;
+    rhoddd_that = 3*Pdd-R;
+    
+       
+else 
+    L = sqrt(1+Pd^2);
+    
+    thetad = 1/L;
+    thetadd = -Pd*Pdd/L^4;
+    thetaddd = -(L^2*(Pdd^2+Pd*Pddd)-4*Pd^2*Pdd^2)/L^7;
+    
+    rhod_rhat = Pd;
+    rhodd_rhat = Pdd;
+    rhoddd_rhat = Pddd;
+    
+    rhod_that = 1;
+    rhodd_that = 0;
+    rhoddd_that = 0;
+    
+    
+end
+
+rho_that = zeros(1,4);
+rho_rhat = zeros(1,4);
+
+rho_that(1) = 0;
+rho_that(2) = rhod_that*thetad;
+rho_that(3) = rhodd_that*thetad^2+rhod_that*thetadd;
+rho_that(4) = rhoddd_that*thetad^3+3*rhodd_that*thetadd*thetad+rhod_that*thetaddd;
+
+rho_rhat(1) = P;
+rho_rhat(2) = rhod_rhat*thetad;
+rho_rhat(3) = rhodd_rhat*thetad^2+rhod_rhat*thetadd;
+rho_rhat(4) = rhoddd_rhat*thetad^3+3*rhodd_rhat*thetadd*thetad+rhod_rhat*thetaddd;
+
+
+norm_deriv_that = rho_that(1:D);
+norm_deriv_rhat = Psign*rho_rhat(1:D);

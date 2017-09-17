@@ -1,0 +1,17 @@
+<library path="lib/libuwp_plotter">
+  <class name="uwp_ros/UWPPlotter"
+         type="uwp_ros::UWPPlotter" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet to plot wind data.
+    </description>
+  </class>
+</library>
+
+<library path="lib/libuwp_main">
+  <class name="uwp_ros/UWPMain"
+         type="uwp_ros::UWPMain" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for planning and visualization.
+    </description>
+  </class>
+</library>

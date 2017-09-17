@@ -1,0 +1,47 @@
+function [path_ind_new,theta_new,ended] = dubinsTransPolyAdvanceCarrot(path,path_ind,theta,ds)
+
+ended = 0;
+
+if path_ind>length(path)
+    ended = 1;
+    path_ind = path_ind-1;
+    ds = 0;
+end
+    
+
+if path{path_ind}.type==0
+    line = path{path_ind};
+    P_vec = poly_get_derivatives(line.poly,theta,2);
+    L = sqrt(1+P_vec(2)^2);
+    theta_max = line.length;
+else
+    arc = path{path_ind};
+    P_vec = poly_get_derivatives(arc.poly,theta,2);
+    R = arc.R-arc.ccw*P_vec(1);
+    L = sqrt((R/arc.R)^2+P_vec(2)^2);
+    theta_max = arc.length;
+end
+
+dtheta = ds/L;
+theta_new = theta+dtheta;
+
+if theta_new>theta_max
+    ds_remainder = (theta_new-theta_max)*L;
+    path_ind_new = path_ind+1;
+    theta_new = 0;
+    [path_ind_new,theta_new,ended] = ...
+        dubinsTransPolyAdvanceCarrot(path,path_ind_new,theta_new,ds_remainder);
+    return;
+end
+
+path_ind_new = path_ind;
+
+if ended
+    theta_new = theta_max;
+    return;
+end
+
+
+    
+    
+        

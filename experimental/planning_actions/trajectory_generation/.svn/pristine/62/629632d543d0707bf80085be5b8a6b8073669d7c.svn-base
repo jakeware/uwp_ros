@@ -1,0 +1,39 @@
+clear all;
+home;
+
+syms P Pd Pdd Pddd R0
+R = R0+P;
+L = sqrt(Pd^2+R^2);
+
+Pvec = [P;Pd;Pdd;Pddd];
+rho = P;
+rhod = Pd/L;
+rhodd = Pdd*(1/L^2-Pd^2/L^4)-R/L^2-Pd^2*R/L^4;
+
+rhovec = [rho;rhod;rhodd];
+
+Asec = jacobian(rhovec,Pvec);
+
+Asec = subs(Asec,'R0+P','R');
+Asec = subs(Asec,'2*R0+2*P','2*R');
+Asec = subs(Asec,Pd^2+R^2,L^2);
+latex(Asec)
+
+
+Asec = subs(Asec,'P',0,0);
+Asec = subs(Asec,'Pd',0,0);
+Asec = subs(Asec,'Pdd',0,0);
+Asec = subs(Asec,'Pddd',0,0);
+
+
+Asec;
+Asec*Pvec
+
+rhovec = subs(rhovec,'R0+P','R');
+rhovec = subs(rhovec,'2*R0+2*P','2*R');
+rhovec = subs(rhovec,'Pd^2+R^2','L^2');
+
+
+rhovec
+
+

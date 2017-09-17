@@ -1,0 +1,114 @@
+clear all;
+R = 8;
+V=8;
+g = 9.8;
+
+
+N=10;
+D=4;
+
+accel_cost=.01;
+der_costs = zeros(1,N+1);
+der_costs(1) = 0.3;
+der_costs(2) = 1;
+der_costs(3) = 0;
+der_costs(4) = 50;
+der_costs(5) = 1;
+
+
+% der_costs(2) = 1;
+% der_costs(4) = .1;
+% der_costs(5) = .0001;
+
+
+
+path_case = 1;
+
+switch path_case
+    case 1
+        xy_start = [0;0];
+        xy_end = [-R;3*R];
+        theta_start = 0;
+        theta_end = pi/2;
+    case 2
+        xy_start = [0;0];
+        xy_end = [-R;2*R];
+        theta_start = 0;
+        theta_end = -pi;
+    case 3
+        xy_start = [0;0];
+        xy_end = [0;4*R];
+        theta_start = 08
+        theta_end = 0;
+    case 4
+        xy_start = [0;0];
+        xy_end = [100*R;0];
+        theta_start = pi/2;
+        theta_end = -pi/2;
+    case 5
+        xy_start = [0;0];
+        xy_end = [-.5*R;2.5*R];
+        theta_start = 0;
+        theta_end = 3*pi/4;
+    case 6
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[3.6248;-0.4306];
+        theta_end = 8.3519;
+    case 7
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[0.2025;2.3594];
+        theta_end = 2.6043;
+    case 8
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[.01*R;.5*R];
+        theta_end = pi/2;
+    otherwise
+        xy_start = [R;0];
+        xy_end = [-3*R;2*R];
+        theta_start = pi/2;
+        theta_end = pi/2;
+end
+
+trans_der_0 = zeros(D,1);
+trans_der_final = zeros(D,1);
+
+re_opt = 1;
+path = dubinsGetPath(R,xy_start,theta_start,xy_end,theta_end);
+trans_der_0(3) = path{1}.curvature;
+trans_der_final(3) = path{end}.curvature;
+
+[path_trans_poly,J] = dubinsTransPolyGetPath(path,der_costs,D,trans_der_0,trans_der_final,re_opt);
+
+dub_length = dubinsGetPathLength(path);
+
+dss = [.05*dub_length,.01*dub_length,.001*dub_length];
+dsslegnames = {'ds=0.05L','ds=0.01L','ds=0.001L','actual path'};
+colors='bgrcmyk';
+
+[x,y]=dubinsTransPolyDiscretizePath(path_trans_poly);
+ 
+
+lw=2;
+figure(1);clf;
+hold on
+for ii=1:length(dss)
+    ds=dss(ii);
+    [d,xy,xyd,xydd,xyddd,thetas,dubins_curvatures]=dubinsTransPolyDiscretizePathUniform(path_trans_poly,ds);
+N_d=length(d);
+xydd_int = ds*cumsum(xyddd,2)+repmat(xydd(:,1),1,N_d);
+xyd_int = ds*cumsum(xydd_int,2)+repmat(xyd(:,1),1,N_d);
+xy_int = ds*cumsum(xyd_int,2)+repmat(xy(:,1),1,N_d);
+plot(xy_int(1,:),xy_int(2,:),'LineWidth',lw,'Color',colors(ii));
+end
+plot(x,y,'LineWidth',lw,'Color','k');
+legend(dsslegnames)
+% plot(x_dub,y_dub,'k--')
+% quiver(xy(1,:),xy(2,:),xydd(1,:),xydd(2,:))
+grid on
+axis equal
+title('Resolution Convergence')
+saveFigForPaper('transpolyres',gcf);
+

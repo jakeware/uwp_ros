@@ -1,0 +1,39 @@
+function [index_kk_to_BR, index_BR_to_kk] = ...
+    poly_opt_piece_BR_index_maps(N_extra_constraints,D,N_poly,K)
+% N_extra_constraints - number of constraints left over after assigning the
+%   D to each polynomial
+
+N_K = K*N_poly;
+if (N_extra_constraints>=0)
+    N_extra_per_K = floor(N_extra_constraints/K);
+else
+    N_extra_per_K = ceil(N_extra_constraints/K);
+end
+
+N_extra_remainder = N_extra_constraints - N_extra_per_K * K;
+
+sign_remainder = sign(N_extra_remainder);
+N_extra_remainder = abs(N_extra_remainder);
+
+b_kk_sizes = (D+N_extra_per_K) * ones(1,K);
+b_kk_sizes(1:N_extra_remainder)=b_kk_sizes(1:N_extra_remainder)+sign_remainder;
+b_kk_starts = cumsum(b_kk_sizes) - b_kk_sizes + 1;
+b_kk_ends = cumsum(b_kk_sizes);
+
+r_kk_sizes = N_poly - b_kk_sizes;
+r_kk_starts = cumsum(r_kk_sizes) - r_kk_sizes + 1;
+r_kk_ends = cumsum(r_kk_sizes);
+
+poly_inds_base = 1:N_poly;
+for kk=1:K
+    x_kk_inds = poly_inds_base + (kk-1)*N_poly;
+    b_kk_indices = x_kk_inds(1:b_kk_sizes(kk));
+    r_kk_indices = x_kk_inds((b_kk_sizes(kk)+1):end);
+    
+    B_indices(b_kk_starts(kk):b_kk_ends(kk)) = b_kk_indices;
+    R_indices(r_kk_starts(kk):r_kk_ends(kk)) = r_kk_indices;
+end
+
+index_kk_to_BR = [B_indices,R_indices];
+kk_standard = 1:N_K;
+index_BR_to_kk(index_kk_to_BR) = kk_standard;

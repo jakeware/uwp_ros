@@ -1,0 +1,5 @@
+function dist = dubinsGetPathLength(path)
+dist = 0;
+for ii=1:length(path)
+    dist = dist + path{ii}.length;
+end

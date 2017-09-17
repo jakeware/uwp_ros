@@ -1,0 +1,19 @@
+function arc = dubinsNewArc(center, R, start_angle, end_angle, ccw)
+
+arc.center = center;
+arc.R = R;
+arc.curvature = ccw/R;
+arc.start_angle = wrapToPi(start_angle);
+arc.end_angle = wrapToPi(end_angle);
+if ~(ccw == 1 || ccw == -1)
+    error('invalid ccw');
+end
+
+arc.ccw = ccw;
+arc.sweep_angle = wrapTo2Pi(arc.ccw * (arc.end_angle - arc.start_angle));
+arc.length = arc.sweep_angle * arc.R;
+
+arc.type = arc.ccw;
+arc.end_pt = arc.R*angleToVec(arc.end_angle)+arc.center;
+arc.start_pt = arc.R*angleToVec(arc.start_angle)+arc.center;
+

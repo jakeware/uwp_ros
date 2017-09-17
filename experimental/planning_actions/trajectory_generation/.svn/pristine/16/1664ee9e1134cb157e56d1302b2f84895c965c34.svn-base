@@ -1,0 +1,34 @@
+function [x,lambda] = sqp_iteration(x,lambda,cost_fun,const_fun)
+
+A = jacobianest(const_fun,x);
+c = const_fun(x);
+W_cost = hessian(cost_fun,x);
+grad_cost = gradest(cost_fun,x);
+
+n = length(x);
+m = length(lambda);
+
+W_const = zeros(n,n,m);
+for ii=1:m
+    iith_const = @(x)const_ith(x,ii,const_fun);
+    W_const(:,:,ii) = lambda(ii)*hessian(iith_const,x);
+end
+W = W_cost - sum(W_const,3);
+
+% W = W_cost;
+
+
+LHS = [W,-A';A,zeros(m)];
+
+RHS =  [-grad_cost' + A'*lambda;c];
+
+p=LHS\RHS;
+
+x = x + p(1:n);
+lambda = lambda + p(n+1:end);
+
+
+
+function ith_const_val = const_ith(x,ii,const_fun)
+c = const_fun(x);
+ith_const_val = c(ii);

@@ -1,0 +1,55 @@
+function [x,y] = dubinsTransPolyDiscretizePath(path)
+num_points = 10000;
+d_res = dubinsGetPathLength(path) / num_points;
+
+
+K = length(path);
+x_segs=cell(1,K);
+y_segs=cell(1,K);
+seg_lengths = zeros(1,K);
+
+for ii=1:length(path)
+    if (path{ii}.type == 0)
+        line = path{ii};
+        d = 0:d_res:line.length;
+        polyvals = polyval(line.poly,d);
+        x_seg = zeros(size(d));
+        y_seg = zeros(size(d));
+        for dd = 1:length(polyvals)
+            line_base = line.start_pt + line.unit_vec * d(dd);
+            line_pt = line_base + line.left_unit_vec*polyvals(dd);
+            x_seg(dd) = line_pt(1);
+            y_seg(dd) = line_pt(2);
+        end
+    else 
+        arc = path{ii};
+        d = 0:d_res:arc.length;
+        thetas = arc.ccw*d/arc.R + arc.start_angle;
+        polyvals = polyval(arc.poly,d);
+        x_seg = zeros(size(d));
+        y_seg = zeros(size(d));
+        for dd = 1:length(polyvals)
+            r_unit_vec = [cos(thetas(dd));sin(thetas(dd))];
+            arc_pt = arc.center+r_unit_vec*(arc.R-arc.ccw*polyvals(dd));
+            x_seg(dd) = arc_pt(1);
+            y_seg(dd) = arc_pt(2);
+        end
+    end
+    x_segs{ii} = x_seg;
+    y_segs{ii} = y_seg;     
+    seg_lengths(ii) = length(x_seg);
+end
+
+ind_starts = cumsum(seg_lengths) - seg_lengths + 1;
+ind_ends = cumsum(seg_lengths);
+n_disc = ind_ends(end);
+
+x=zeros(1,n_disc);
+y=zeros(1,n_disc);
+
+
+for ii=1:K
+    x(ind_starts(ii):ind_ends(ii)) = x_segs{ii};
+    y(ind_starts(ii):ind_ends(ii)) = y_segs{ii};
+end
+        

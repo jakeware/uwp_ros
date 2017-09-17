@@ -1,0 +1,14 @@
+function new_path = dubinsRemoveZeroElements(path)
+K = length(path);
+
+bad_inds = zeros(1,K);
+
+for kk=1:K
+    if path{kk}.length==0
+        bad_inds(kk)=1;
+    end
+end
+
+path(bad_inds==1)=[];
+
+new_path = path;

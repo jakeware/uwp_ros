@@ -1,0 +1,165 @@
+clear all;
+R = 1;
+V=8;
+ds=.01;
+dt = ds/V;
+
+
+N=8;
+D=4;
+
+path_case = 5;
+
+switch path_case
+    case 1
+        xy_start = [0;0];
+        xy_end = [-R;3*R];
+        theta_start = 0;
+        theta_end = pi/2;
+    case 2
+        xy_start = [0;0];
+        xy_end = [-R;2*R];
+        theta_start = 0;
+        theta_end = -pi;
+    case 3
+        xy_start = [0;0];
+        xy_end = [0;4*R];
+        theta_start = 0;
+        theta_end = 0;
+    case 4
+        xy_start = [0;0];
+        xy_end = [.1*R;.89*R];
+        theta_start = 0;
+        theta_end = pi/14;
+    case 5
+        xy_start = [0;0];
+        xy_end = [.1*R;4.89*R];
+        theta_start = 0;
+        theta_end = pi+pi/14;
+    case 6
+        xy_start = [0;0];
+        xy_end = [.1*R;20.1*R];
+        theta_start = 0;
+        theta_end = pi;
+    otherwise
+        xy_start = [R;0];
+        xy_end = [-3*R;2*R];
+        theta_start = pi/2;
+        theta_end = pi/2;
+end
+
+
+accel_cost=1000;
+der_costs = zeros(1,N+1);
+der_costs(:,1) = 1;
+der_cost = 4;
+der_costs(der_cost+1) = accel_cost;
+
+trans_der_0 = zeros(D,1);
+trans_der_final = zeros(D,1);
+
+re_opt = 3;
+
+
+path = dubinsGetPath(R,xy_start,theta_start,xy_end,theta_end);
+trans_der_0(3) = path{1}.curvature;
+trans_der_final(3) = path{end}.curvature;
+path_trans_poly = dubinsTransPolyGetPath(path,der_costs,D,trans_der_0,trans_der_final,re_opt);
+
+[d,xy_desired,xyd_desired,xydd_desired,xyddd_desired]=dubinsTransPolyDiscretizePathUniform(path_trans_poly,ds);
+
+[x_dub,y_dub] = dubinsDiscretizePath(path);
+
+N_d = size(xy_desired,2);
+ZN_d = zeros(1,N_d);
+
+xyz_desired = [xy_desired;ZN_d];
+xyzd_desired = V*[xyd_desired;ZN_d];
+xyzdd_desired = V^2*[xydd_desired;ZN_d];
+xyzddd_desired = V^3*[xyddd_desired;ZN_d];
+
+%initial state 
+at0=0;
+an0=sqrt(9.8^2+norm(xyzdd_desired(:,1))^2);
+p0=xyz_desired(:,1);
+v0=xyzd_desired(:,1);
+phi0=atan2(V^2*path_trans_poly{1}.curvature,9.8);
+n0=[0,sin(phi0),cos(phi0)]'; %unit vector pointing up
+
+x0=[p0;v0;n0;an0;at0];
+x = zeros(11,N_d);
+x(:,1)=x0;
+roll_rate = zeros(1,N_d);
+
+t=d/V;
+
+% for ii=1:N_d-1;
+%     [dx,roll_rate(ii)] = coordinatedAirplaneModelCL(...
+%         x(:,ii),xyz_desired(:,ii),xyzd_desired(:,ii),xyzdd_desired(:,ii),xyzddd_desired(:,ii),1);
+%     x(:,ii+1)=x(:,ii)+dt*dx;
+% end
+
+xyz_act = x(1:3,:);
+vg_act = x(4:6,:);
+n_act = x(7:9,:);
+
+
+lw=2;
+figure(1);clf;
+plot(xyz_act(1,:),xyz_act(2,:),'LineWidth',lw);
+hold on
+plot(xyz_desired(1,:),xyz_desired(2,:),'r--','LineWidth',lw);
+plot(x_dub,y_dub,'k--','LineWidth',lw)
+grid on
+axis equal
+title('Tracking')
+legend('actual','desired','dubins')
+% saveFigForPaper(['poly_curve_tracking_xy' num2str(D) num2str(path_case)],gcf);
+
+
+figure(2);clf;
+plot(t,xyz_act);
+hold on
+plot(t,xyz_desired,'--');
+legend('x','y','z')
+grid on
+
+
+figure(3);clf;
+plot(t,rad2deg(roll_rate))
+title('roll rate, deg/s')
+grid on
+% saveFigForPaper(['poly_curve_tracking_roll' num2str(D) num2str(path_case)],gcf);
+
+
+
+
+
+
+
+
+% 
+% 
+% 
+% for tt=1:(length(t)-1)
+%     p=x(1:3,tt);
+%     v=x(4:6,tt);
+%     n=x(7:9,tt);
+% 
+%     an=x(10,tt);
+%     at=x(11,tt);
+% 
+%     e1=v/norm(v);
+%     e3=n/norm(n);
+%     e2=cross(e3,e1);
+%     R=[e1,e2,e3];
+%     
+%     g=[R,p;0,0,0,1];
+%     xi=asc_vomega_to_xi(vb,omega2);
+%     
+%     [F_b,M_b]=asc_glider_FM(xi,zeros(3,1),surf_defs,surf_graphics_a,body_graphics_a,g);
+%     axis([p(1)-wd,p(1)+wd,-p(2)-wd,-p(2)+wd,-p(3)-wd,-p(3)+wd]);
+%     pause(t(tt+1)-t(tt));
+%     
+% end
+

@@ -1,0 +1,261 @@
+clear all;
+R = 8;
+V=8;
+g = 9.8;
+
+
+N=8;
+D=4;
+
+accel_cost=.01;
+der_costs = zeros(1,N+1);
+der_costs(1) = 1;
+% der_costs(:,2) = 1;
+der_cost = 4;
+der_costs(der_cost+1) = accel_cost*R^der_cost;
+
+% der_costs(2) = 1;
+% der_costs(4) = .1;
+% der_costs(5) = .0001;
+
+
+
+path_case = 1;
+
+switch path_case
+    case 1
+        xy_start = [0;0];
+        xy_end = [-R;3*R];
+        theta_start = 0;
+        theta_end = pi/2;
+    case 2
+        xy_start = [0;0];
+        xy_end = [-R;2*R];
+        theta_start = 0;
+        theta_end = -pi;
+    case 3
+        xy_start = [0;0];
+        xy_end = [0;4*R];
+        theta_start = 08
+        theta_end = 0;
+    case 4
+        xy_start = [0;0];
+        xy_end = [100*R;0];
+        theta_start = pi/2;
+        theta_end = -pi/2;
+    case 5
+        xy_start = [0;0];
+        xy_end = [-.5*R;2.5*R];
+        theta_start = 0;
+        theta_end = 3*pi/4;
+    case 6
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[3.6248;-0.4306];
+        theta_end = 8.3519;
+    case 7
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[0.2025;2.3594];
+        theta_end = 2.6043;
+    case 8
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[.01*R;.5*R];
+        theta_end = pi/2;
+    otherwise
+        xy_start = [R;0];
+        xy_end = [-3*R;2*R];
+        theta_start = pi/2;
+        theta_end = pi/2;
+end
+
+trans_der_0 = zeros(D,1);
+trans_der_final = zeros(D,1);
+% trans_der_0(4) = -1;
+
+
+re_opt = 1;
+path = dubinsGetPath(R,xy_start,theta_start,xy_end,theta_end);
+% trans_der_0(3) = path{1}.curvature;
+% trans_der_final(3) = path{end}.curvature;
+
+[path_trans_poly,J] = dubinsTransPolyGetPath(path,der_costs,D,trans_der_0,trans_der_final,1);
+% path_single_opt = dubinsTransPolyGetPath(path,der_costs,D,trans_der_0,trans_der_final,1);
+
+coeffs1=[2.20402e-13
+2.44373e-14
+-0.0625
+8.09538e-18
+0.00228177
+-0.000288299
+1.50174e-05
+-3.63033e-07
+3.3594e-09];
+coeffs2=[0.012916
+-0.0686193
+0.0782144
+-0.00753254
+-0.000132213
+1.37731e-05
+-3.40539e-07
+1.91692e-07
+-9.19527e-09];
+
+path_trans_poly{1}.poly=flipud(coeffs1)';
+path_trans_poly{2}.poly=flipud(coeffs2)';
+
+path_single_opt = path_trans_poly;
+
+
+dub_length = dubinsGetPathLength(path);
+% ds=.005*dub_length;
+ds = 1;
+
+[x,y]=dubinsTransPolyDiscretizePath(path_trans_poly);
+ [x_single_opt,y_single_opt]=dubinsTransPolyDiscretizePath(path_single_opt);
+xy = [x;y];
+[x_dub,y_dub]=dubinsDiscretizePath(path);
+
+
+[d,xy,xyd,xydd,xyddd,thetas,dubins_curvatures]=dubinsTransPolyDiscretizePathUniform(path_trans_poly,ds);
+
+kappa = xyd(1,:).*xydd(2,:)-xyd(2,:).*xydd(1,:);
+dkappa = xydd(1,:).*xydd(2,:) + xyd(1,:).*xyddd(2,:) - xydd(2,:).*xydd(1,:) - xyd(2,:).*xyddd(1,:);
+
+kappa_int = cumtrapz(d,dkappa)+kappa(1);
+
+roll = atan2(V^2*kappa,g);
+droll = 1./(1+(V^2*kappa/g).^2)*V^3.*dkappa/g;
+norm_accel = sqrt((V^2*kappa).^2+g^2);
+
+roll_int = cumtrapz(d/V,droll)+roll(1);
+
+
+K = length(path);
+P = zeros(K,N+1);
+taus = zeros(K,1);
+for kk=1:K
+    taus(kk) = path_trans_poly{kk}.length;
+    P(kk,:) = path_trans_poly{kk}.poly;
+end
+
+
+dP = polyder_piece(P);
+ddP = polyder_piece(dP);
+dddP = polyder_piece(ddP);
+
+kappa_poly = polyval_piece(ddP,taus,thetas)+dubins_curvatures;
+dkappa_poly = polyval_piece(dddP,taus,thetas);
+
+N_d=length(d);
+xydd_int = ds*cumsum(xyddd,2)+repmat(xydd(:,1),1,N_d);
+xyd_int = ds*cumsum(xydd_int,2)+repmat(xyd(:,1),1,N_d);
+xy_int = ds*cumsum(xyd_int,2)+repmat(xy(:,1),1,N_d);
+
+u = xydd(1,:);
+v = xydd(2,:);
+
+
+lw=2;
+figure(1);clf;
+subplot(5,4,1:8);
+% plot(xy(1,:),xy(2,:),'LineWidth',lw);
+hold on
+plot(x_single_opt,y_single_opt,'b');
+plot(xy_int(1,:),xy_int(2,:),'r--','LineWidth',lw);
+% plot(x_dub,y_dub,'k--')
+% quiver(xy(1,:),xy(2,:),xydd(1,:),xydd(2,:))
+grid on
+axis equal
+
+subplot(5,4,9:12)
+% plot(d,kappa)
+% grid on
+% hold on
+% plot(d,kappa_poly,'r')
+% plot(d,kappa_int,'g--')
+% title('curvature')
+% legend('actual with polar nonlinearities','polynomial approximate')
+plot(d/V,rad2deg(roll))
+hold on
+plot(d/V,rad2deg(roll_int),'r--')
+title('roll')
+grid on
+
+
+subplot(5,4,13:16)
+% plot(d,dkappa)
+% grid on
+% hold on
+% plot(d,dkappa_poly,'r')
+% title('dcurvature')
+% legend('actual with polar nonlinearities','polynomial approximate')
+plot(d/V,rad2deg(droll))
+title('roll rate')
+grid on
+
+subplot(5,4,17:20)
+% plot(d,dkappa)
+% grid on
+% hold on
+% plot(d,dkappa_poly,'r')
+% title('dcurvature')
+% legend('actual with polar nonlinearities','polynomial approximate')
+plot(d/V,norm_accel/g)
+title('g loading')
+grid on
+
+
+% 
+% figure(2);clf;
+% subplot(3,1,1)
+% plot(d,xyd,'LineWidth',lw);
+% hold on
+% grid on
+% subplot(3,1,2)
+% plot(d,xydd,'LineWidth',lw);
+% hold on
+% grid on
+% subplot(3,1,3)
+% plot(d,xyddd,'LineWidth',lw);
+% hold on
+% grid on
+% 
+
+% d = linspace(0,sum(taus),1000);
+% 
+% 
+% n_der_to_plot = 4;
+% 
+% figure(3);clf;
+% for dd=1:n_der_to_plot
+% subplot(n_der_to_plot,1,dd)
+% plot(d,polyval_piece(P,taus,d));
+% grid on
+% P = polyder_piece(P);
+% end
+% 
+% J/sum(taus);
+
+
+
+
+% figure(3);clf;
+% plot(d,xy-xy_int);
+% grid on
+
+
+xyc=[9.79717e-16    1.00494    2.01932     3.0286    4.01371     4.9498    5.80699    6.55495    7.16905    7.63522    7.95161    8.12686    8.17673    8.12015     7.9755    7.75676    7.47002    7.11193    6.67168     6.1363    5.49682    4.75305    3.91578    3.00565    2.04797    1.06488  0.0683265  -0.926999   -1.93395   -2.93745   -3.91808   -4.85129   -5.70678   -6.45134   -7.05511   -7.50001   -7.78672    -7.9372   -7.99169   -7.99996
+2.20402e-13 0.00239877  0.0329097   0.138752   0.361628   0.727628    1.24589    1.90913    2.69613    3.57698    4.51965    5.49563    6.48327    7.46878    8.44536    9.41069    10.3629    11.2958    12.1967    13.0456     13.818    14.4882    15.0343    15.4442    15.7217    15.8888    15.9823    16.0433    16.1183    16.2568    16.4998    16.8755    17.3975    18.0644    18.8591    19.7507     20.702    21.6799    22.6644    23.6524];
+xydc=[           1       1.0066      1.01606      1.00962      0.97466     0.906919     0.808159     0.684149     0.543197     0.394816     0.248471     0.112509  -0.00679434    -0.106301    -0.187209    -0.255751    -0.322066    -0.396444    -0.484614    -0.585326    -0.691362    -0.792379    -0.877922    -0.940212    -0.976757    -0.992391    -0.999402    -0.999809     -1.00531    -0.998873    -0.967237    -0.903518    -0.806138    -0.678272     -0.52806    -0.368826    -0.218482   -0.0974411    -0.023605 -0.000510005
+ 2.44373e-14   0.00923446    0.0602318     0.160008     0.294337       0.4445     0.593844     0.729357     0.842011     0.926822     0.982603      1.01144      1.01802      1.00886     0.990968     0.969842     0.946957     0.918435     0.876522     0.813315     0.724327     0.610502      0.47888     0.342314     0.217944     0.123554    0.0706013    0.0594779    0.0985648     0.185555     0.307662     0.449569     0.596495     0.734812     0.852483     0.940201     0.993166      1.01307      1.00976      1.00091];
+xyddc=[ 1.12297e-28 -0.000584017  -0.00570037   -0.0203555   -0.0454667   -0.0769925    -0.108445     -0.13374    -0.148974    -0.152907    -0.146508    -0.132133    -0.112929   -0.0927122    -0.076024   -0.0674329   -0.0694492    -0.080358   -0.0944683    -0.104818    -0.105926   -0.0953882   -0.0746341   -0.0488093   -0.0250919  -0.00929158   -0.0022341   0.00078866   0.00677783    0.0206503    0.0439295    0.0750148       0.1095     0.140708     0.160887     0.163143     0.143479     0.102369    0.0478051   0.00431247
+-4.55191e-15    0.0258268    0.0762371     0.121089     0.148591     0.156731     0.147551     0.125451    0.0961203    0.0652603    0.0374323    0.0154239  0.000170185  -0.00898325   -0.0139615   -0.0176928   -0.0236182     -0.03469   -0.0522596    -0.075475    -0.101124    -0.123808    -0.136825    -0.134049    -0.112415   -0.0746285   -0.0323543    0.0125425    0.0635757     0.106815     0.136422     0.150385     0.147952     0.129881    0.0996796    0.0641795    0.0321708    0.0108282   0.00169962  2.13389e-05];
+xydddc=[ 1.13928e-31   -0.0039925   -0.0129457   -0.0230221    -0.031328   -0.0344017   -0.0304783   -0.0207719  -0.00842976   0.00330321    0.0123722    0.0181049    0.0204395    0.0189499     0.012916   0.00300947  -0.00730795   -0.0134587   -0.0129792  -0.00629472   0.00447093    0.0160741    0.0244519    0.0261595    0.0205676    0.0110524   0.00455536   0.00396271    0.0116176    0.0208358    0.0293996    0.0352784    0.0353189    0.0270146    0.0105089   -0.0109045   -0.0325989   -0.0504226   -0.0553496   -0.0237366
+-1.86059e-15    0.0438968    0.0492588    0.0367282    0.0194585   0.00129868    -0.015023   -0.0266171   -0.0319171   -0.0313951   -0.0269973   -0.0209629   -0.0148727  -0.00956038  -0.00586735  -0.00513364  -0.00823632   -0.0142399   -0.0207863   -0.0253403   -0.0254873   -0.0191784  -0.00590294    0.0122507    0.0307814    0.0428852    0.0380578    0.0506695     0.047158    0.0359343    0.0226742   0.00762247  -0.00910631    -0.024965   -0.0355279   -0.0371189    -0.029835   -0.0180633  -0.00703575 -0.000521378];
+
+
+xy-xyc
+xyd-xydc
+

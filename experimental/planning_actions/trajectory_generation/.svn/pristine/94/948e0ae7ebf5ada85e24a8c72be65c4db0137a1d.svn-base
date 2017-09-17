@@ -1,0 +1,208 @@
+clear all;
+R = 1;
+V=1;
+N=8;
+D=4;
+
+path_case = 1;
+
+switch path_case
+    case 1
+        xy_start = [0;0];
+        xy_end = [-R;3*R];
+        theta_start = 0;
+        theta_end = pi/2;
+    case 2
+        xy_start = [0;0];
+        xy_end = [-R;2*R];
+        theta_start = 0;
+        theta_end = -pi;
+    case 3
+        xy_start = [0;0];
+        xy_end = [0;4*R];
+        theta_start = 0;
+        theta_end = 0;
+    otherwise
+        xy_start = [R;0];
+        xy_end = [-3*R;2*R];
+        theta_start = pi/2;
+        theta_end = pi/2;
+end
+
+path = dubinsGetPath(R,xy_start,theta_start,xy_end,theta_end);
+[x_plot,y_plot]=dubinsDiscretizePath(path);
+[t_dub,roll_dub,norm_accel_dub] = dubinsCoordinatedSimpleInvert(path,V);
+
+% accel_costs = linspace(10,10000,4).^2;
+accel_costs=.3^2*ones(1,2);
+n_accel_costs = length(accel_costs);
+der_costs = zeros(n_accel_costs,N+1);
+der_costs(:,1) = 1;
+der_cost = 4;
+der_costs(:,der_cost+1) = accel_costs*R^der_cost;
+
+%do one just to get the t length
+path_trans_poly = dubinsTransPolyGetPath(path,der_costs(1,:),D,0);
+[t,roll,roll_rate,roll_accel,norm_accel] = dubinsTransPolyCoordinatedSimpleInvert(path_trans_poly,V);
+[x_plot_trans,y_plot_trans]=dubinsTransPolyDiscretizePath(path_trans_poly);
+N_t = length(t);
+
+rolls = zeros(n_accel_costs,N_t);
+rolls_nl = zeros(n_accel_costs,N_t);
+roll_rates = zeros(n_accel_costs,N_t);
+roll_rates_nl = zeros(n_accel_costs,N_t);
+roll_accels = zeros(n_accel_costs,N_t);
+roll_accels_nl = zeros(n_accel_costs,N_t);
+norm_accels = zeros(n_accel_costs,N_t);
+
+N_x = length(x_plot_trans);
+x_plot_transs = zeros(n_accel_costs,N_x);
+y_plot_transs = zeros(n_accel_costs,N_x);
+
+legend_string = cell(1,n_accel_costs+1);
+
+
+for ii=1:length(accel_costs)
+    
+    [path_trans_poly,J] = dubinsTransPolyGetPath(path,der_costs(ii,:),D,ii-1);
+    
+    [x_plot_transs(ii,:),y_plot_transs(ii,:)]=dubinsTransPolyDiscretizePath(path_trans_poly);
+    [t,rolls_nl(ii,:),roll_rates(ii,:),roll_accels(ii,:),norm_accels(ii,:),rolls(ii,:)] = ...
+        dubinsTransPolyCoordinatedSimpleInvert(path_trans_poly,V);
+    
+    roll_rates_nl(ii,1:end-1) = diff(rolls_nl(ii,:))./diff(t);
+    roll_accels_nl(ii,1:end-2) = diff(roll_rates_nl(ii,1:end-1))./diff(t(1:end-1));
+    
+    legend_string{ii}=num2str(round(sqrt(accel_costs(ii))));
+end
+
+legend_string{ii+1} = 'Dubins';
+
+lw=2;
+
+figure(1);clf;
+
+subplot(3,2,[1,3]);
+plot(x_plot_transs',y_plot_transs','LineWidth',lw);
+hold on
+plot(x_plot,y_plot,'k','LineWidth',lw);
+axis equal
+grid on
+legend(legend_string);
+
+subplot(3,2,2)
+plot(t,rolls,'LineWidth',lw);
+hold on
+plot(t_dub,roll_dub,'k','LineWidth',lw);
+% plot(t,rolls_nl,'--','LineWidth',lw)
+title('roll angle')
+grid on
+
+subplot(3,2,4)
+plot(t,roll_rates,'LineWidth',lw);
+hold on
+% plot(t,roll_rates_nl,'--','LineWidth',lw);
+title('roll rate');
+
+
+grid on
+
+subplot(3,2,6)
+plot(t,roll_accels,'LineWidth',lw);
+hold on
+% plot(t,roll_accels_nl,'--','LineWidth',lw);
+title('roll accel');
+grid on
+
+subplot(3,2,5)
+plot(t,norm_accels,'LineWidth',lw);
+hold on
+plot(t_dub,norm_accel_dub,'k','LineWidth',lw);
+title('norm accel');
+grid on
+
+
+P=zeros(length(path_trans_poly),length(path_trans_poly{1}.poly));
+taus=zeros(1,length(path_trans_poly));
+for kk=1:length(path)
+    P(kk,:)=path_trans_poly{kk}.poly;
+    taus(kk)=path_trans_poly{kk}.tau;
+end
+
+P_copy = P;
+
+t=linspace(0,sum(taus),N_x);
+
+n_der_to_plot=4;
+
+figure(2);clf;
+for ii=1:n_der_to_plot
+    subplot(n_der_to_plot,1,ii)
+    plot(t,polyval_piece(P_copy,taus,t));
+    title(num2str(ii-1))
+    grid on
+    
+    P_copy = polyder_piece(P_copy);
+end
+
+figure(3);clf;
+
+z_accel = zeros(n_accel_costs,1);
+
+dydx = [diff(y_plot_transs,1,2)./diff(x_plot_transs,1,2), z_accel];
+% dydt = [diff(y_plot_transs,1,2)./diff(t,1,2), z_accel];
+dydx_dub = [diff(y_plot,1,2)./diff(x_plot,1,2), 0];
+
+% dy2 = [diff(y_plot_transs,2,2), zeros(2,1)];
+% dydx2 = [dy2./diff(x_plot_transs,1,2).^2, zeros(2,1)];
+dydx2 = [diff(dydx,1,2)./diff(x_plot_transs,1,2), z_accel];
+% dydt2 = [diff(dydt,1,2)./diff(t,1,2), z_accel];
+dydx2_dub = [diff(dydx_dub,1,2)./diff(x_plot,1,2), 0];
+
+dydx3 = [diff(dydx2,1,2)./diff(x_plot_transs,1,2), z_accel];
+
+
+win_beg = -.1*R;
+win_end = .1*R;
+
+t_beg = find(t<win_beg,1,'last');
+t_end = find(t<win_end,1,'last');
+
+P_d = polyder_piece(P);
+P_dd = polyder_piece(P_d);
+
+Gammas = cumsum(taus)-taus;
+
+subplot(3,1,1);
+plot(x_plot_trans',dydx')
+hold on
+plot(x_plot_trans',dydx_dub','g')
+% plot(t',-dydt','g')
+% plot(t,polyval_piece(P_d,taus,t),'r--');
+% plot(taus(1),P_0_vecs{2}(2),'ok');
+% plot(taus(1),P_final_vecs{1}(2),'xk');
+axis([win_beg win_end -2 2])
+grid on
+
+subplot(3,1,2);
+plot(x_plot_trans(:,2000:end)',-dydx2(:,2000:end)')
+hold on
+% plot(t',dydt2','g')
+plot(x_plot_trans(:,2000:end)',-dydx2_dub(:,2000:end)','g')
+% plot(t,polyval_piece(P_dd,taus,t),'r--');
+% plot(taus(1),-P_0_vecs{2}(3),'ok');
+% plot(taus(1),-P_final_vecs{1}(3),'xk');
+axis([win_beg win_end -2 2])
+grid on
+
+
+subplot(3,1,3);
+plot(x_plot_trans(:,2000:end)',-dydx3(:,2000:end)')
+hold on
+% plot(t',dydt2','g')
+% plot(t,polyval_piece(P_dd,taus,t),'r--');
+% plot(taus(1),-P_0_vecs{2}(3),'ok');
+% plot(taus(1),-P_final_vecs{1}(3),'xk');
+axis([win_beg win_end -2 2])
+grid on
+

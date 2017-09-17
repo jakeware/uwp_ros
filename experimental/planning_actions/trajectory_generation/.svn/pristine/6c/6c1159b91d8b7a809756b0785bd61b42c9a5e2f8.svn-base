@@ -1,0 +1,29 @@
+clear all;
+
+Ns=[4,6,8,50];
+NN = length(Ns);
+
+tau_final = 1;
+der_0=[0;0];
+der_final=[1;0];
+
+
+t=linspace(0,tau_final,1000);
+
+
+ys = zeros(NN,1000);
+legend_string = cell(1,NN);
+for ii=1:NN
+    der_costs = zeros(1,Ns(ii)+1);
+    der_costs(1)=1;
+    [p,J] = poly_opt_single(Ns(ii), tau_final, der_0, der_final, der_costs);
+    ys(ii,:) = polyval(p,t);
+    legend_string{ii}=['N=' num2str(Ns(ii))];
+end
+
+figure(1);clf;
+plot(t,ys);    
+legend(legend_string,'Location','best')
+grid on
+saveFigForPaper('poly_opt_demo',gcf);
+title('Single Polynomial Optimization')

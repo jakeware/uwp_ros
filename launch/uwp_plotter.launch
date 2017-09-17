@@ -1,0 +1,34 @@
+<launch>
+  <!-- Manager name -->
+  <arg name="manager" value="manager" />
+
+  <!-- Launch the nodelet manager. -->
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen">
+  </node>
+
+  <!-- Publish world frame -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="local_frame_broadcaster" args="1 0 0 0 0 0 1 /global /local">
+  </node>
+
+  
+  <!-- rviz -->
+  <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find uwp_ros)/cfg/uwp_plotter.rviz"> -->
+  <!-- </node> -->
+
+  <!-- octomap -->
+  <!-- <node pkg="octomap_server" type="octomap_server_node" name="octomap_server"> -->
+  <!--   <param name="resolution" value="3" /> -->
+
+  <!-- fixed map frame (set to 'map' if SLAM or localization running) -->
+  <!--   <param name="frame_id" type="string" value="/local" /> -->
+
+  <!-- data source to integrate (PointCloud2) -->
+  <!--   <remap from="/cloud_in" to="/occ_grid" /> -->
+  <!-- </node> -->
+  
+  <!-- uwp_plotter -->
+  <node pkg="nodelet" type="nodelet" name="uwp_plotter"
+    args="load uwp_ros/UWPPlotter $(arg manager)" output="screen">
+    <rosparam command="load" file="$(find uwp_ros)/cfg/uwp_plotter.yaml" />
+  </node>
+</launch>

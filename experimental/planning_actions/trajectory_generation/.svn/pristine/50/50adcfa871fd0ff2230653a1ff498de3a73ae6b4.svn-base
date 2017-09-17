@@ -1,0 +1,24 @@
+function [cost,grad,hess] = get_poly_cost(P,path,der_costs)
+
+persistent Q
+if isempty(Q)
+    N_poly = length(der_costs);
+    N = N_poly-1; 
+    K=length(path);
+    N_K = K*N_poly; %number of parameters to optimize
+    Q=zeros(N_K);
+    
+    poly_inds_base=1:N_poly;
+    
+    p_ind_blocks = cell(1,K);
+    
+    for kk=1:K
+        p_ind_blocks{kk} = poly_inds_base + (kk-1)*N_poly;
+        Q_kk = poly_opt_single_cost_mat(N, path{kk}.length, der_costs);
+        Q(p_ind_blocks{kk},p_ind_blocks{kk}) = Q_kk;
+    end
+end
+
+cost = P'*Q*P;
+grad = Q*P;
+hess = Q;

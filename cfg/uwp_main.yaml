@@ -1,0 +1,30 @@
+# uwp_app
+start_state: [10.0, 10.0, 4.0, 0.5]
+goal_state: [20.0, 20.0, 4.0, 0.5]
+ixyz_min: [0,0,0]
+ixyz_max: [100,100,0]
+vel_g_min: 0.5
+vel_g_max: 8.0
+vel_g_step: 0.5
+vel_a_max: 10.0
+min_dist: 200.0
+pow_prof: [-0.000843,0.249580,-1.887530,1.014123,246.880522]
+
+# uwp_data
+wind_path: /home/jakeware/Dropbox/MIT/rrg/flow_field/fluent/exported_data/single_building_v2_comparison/steady_rsm_lps/data_it6000/
+x_fname: reg_pos_x.csv
+y_fname: reg_pos_y.csv
+z_fname: reg_pos_z.csv
+u_fname: reg_mean_vel_x.csv
+v_fname: reg_mean_vel_y.csv
+w_fname: reg_mean_vel_z.csv
+s2uu_fname: reg_cov_vel_xx.csv
+s2vv_fname: reg_cov_vel_yy.csv
+s2ww_fname: reg_cov_vel_zz.csv
+s2uv_fname: reg_cov_vel_xy.csv
+s2vw_fname: reg_cov_vel_yz.csv
+s2uw_fname: reg_cov_vel_xz.csv
+obs_mask_fname: obs_mask.csv
+grid_size_fname: grid_size.csv
+grid_res_fname: xy_step.csv
+grid_height_fname: z_samp.csv

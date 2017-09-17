@@ -1,0 +1,8 @@
+function P_der = polyder_piece(P)
+[n,m] = size(P);
+P_der = zeros(n,m-1);
+for ii=1:n
+    P_cur = P(ii,:);
+    P_der_ii = polyder(P_cur);
+    P_der(ii,(m-length(P_der_ii)):(m-1)) = P_der_ii;
+end

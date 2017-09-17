@@ -1,0 +1,96 @@
+clear all;
+R = 1;
+V=8;
+g = 9.8;
+
+
+N=10;
+D=4;
+
+accel_cost=.01;
+der_costs = zeros(1,N+1);
+% der_costs(:,1) = 1;
+% % der_costs(:,2) = 1;
+% der_cost = 4;
+% der_costs(der_cost+1) = accel_cost*R^der_cost;
+
+der_costs(2) = 1;
+der_costs(4) = .1;
+der_costs(5) = .0001;
+path_case = 1;
+
+switch path_case
+    case 1
+        xy_start = [0;0];
+        xy_end = [-R;3*R];
+        theta_start = 0;
+        theta_end = pi/2;
+    case 2
+        xy_start = [0;0];
+        xy_end = [-R;2*R];
+        theta_start = 0;
+        theta_end = -pi;
+    case 3
+        xy_start = [0;0];
+        xy_end = [0;4*R];
+        theta_start = 0;
+        theta_end = 0;
+    case 4
+        xy_start = [0;0];
+        xy_end = [100*R;0];
+        theta_start = pi/2;
+        theta_end = -pi/2;
+    case 5
+        xy_start = [0;0];
+        xy_end = [-.5*R;2.5*R];
+        theta_start = 0;
+        theta_end = 3*pi/4;
+    case 6
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[3.6248;-0.4306];
+        theta_end = 8.3519;
+    case 7
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[0.2025;2.3594];
+        theta_end = 2.6043;
+    case 8
+        xy_start = zeros(2,1);
+        theta_start = pi/2;
+        xy_end =[.01*R;.5*R];
+        theta_end = pi/2;
+    otherwise
+        xy_start = [R;0];
+        xy_end = [-3*R;2*R];
+        theta_start = pi/2;
+        theta_end = pi/2;
+end
+
+trans_der_0 = zeros(D,1);
+trans_der_final = zeros(D,1);
+% trans_der_0(4) = -1;
+
+re_opt = 0;
+path = dubinsGetPath(R,xy_start,theta_start,xy_end,theta_end);
+% trans_der_0(3) = path{1}.curvature;
+% trans_der_final(3) = path{end}.curvature;
+
+
+[path_trans_poly,J] = dubinsTransPolyGetPath(path,der_costs,D,trans_der_0,trans_der_final,re_opt);
+[x,y]=dubinsTransPolyDiscretizePath(path_trans_poly);
+xy = [x;y];
+
+[path_trans_polyUR,J] = dubinsTransPolyGetPathUR(path,der_costs,D,trans_der_0,trans_der_final,re_opt);
+[xUR,yUR]=dubinsTransPolyDiscretizePathUR(path_trans_polyUR);
+xyUR = [xUR;yUR];
+
+
+lw=2;
+figure(1);clf;
+plot(xy(1,:),xy(2,:),'LineWidth',lw);
+hold on
+plot(xyUR(1,:),xyUR(2,:),'r','LineWidth',lw);
+grid on
+axis equal
+

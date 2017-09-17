@@ -1,0 +1,21 @@
+function rho_vecs = dubinsTransPolyXY(path,path_ind,theta,D)
+rho_vecsTR = dubinsTransPolyTR(path,path_ind,theta,D);
+
+if path{path_ind}.type ==0
+    line = path{path_ind};
+    that = line.unit_vec;
+    rhat = line.left_unit_vec;
+    xy_center = line.start_pt+theta*that;
+else
+    arc = path{path_ind};
+    rhat_sign = -arc.ccw;
+    theta_total = arc.start_angle+arc.ccw*theta/arc.R;
+    rhat = rhat_sign*[cos(theta_total);sin(theta_total)];
+    that = [rhat(2);-rhat(1)];
+    xy_center = arc.center+rhat_sign*arc.R*rhat;
+end
+
+R=[that,rhat];
+
+rho_vecs = R*rho_vecsTR;
+rho_vecs(:,1) = rho_vecs(:,1)+xy_center;

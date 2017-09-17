@@ -1,0 +1,79 @@
+clear all;
+home;
+
+worst_cost = 0;
+
+
+n_tries=1000
+
+xy_size = 10
+R=1;
+N=8;
+D=4;
+re_opt = 1;
+
+accel_cost=.001;
+der_costs = zeros(1,N+1);
+der_costs(:,2) = 1;
+der_costs(:,1) = 0;
+der_cost = 4;
+der_costs(der_cost+1) = accel_cost*R^der_cost;
+
+costs = zeros(n_tries,1);
+trans_der_0 = zeros(D,1);
+trans_der_final = zeros(D,1);
+
+xy_start = zeros(2,1);
+theta_start = pi/2;
+
+for ii=1:n_tries
+    xy_end = xy_size*rand(2,1)-xy_size/2;
+    theta_end = 2*pi*rand;
+    path = dubinsGetPath(R,xy_start,theta_start,xy_end,theta_end);
+    
+    
+    trans_der_0(3) = -path{1}.curvature;
+    trans_der_final(3) = -path{end}.curvature;
+    [path_re_opt,costs(ii)] = dubinsTransPolyGetPath(path,der_costs,D,trans_der_0,trans_der_final,1);
+    path_single_opt = dubinsTransPolyGetPath(path,der_costs,D,trans_der_0,trans_der_final,0);
+    
+    [x_re_opt,y_re_opt]=dubinsTransPolyDiscretizePath(path_re_opt);
+    [x_single_opt,y_single_opt]=dubinsTransPolyDiscretizePath(path_single_opt);
+    [x_dub,y_dub]=dubinsDiscretizePath(path);
+    
+    figure(1);clf;
+%     plot(x_single_opt,y_single_opt,'g');
+    hold on
+    plot(x_re_opt,y_re_opt,'b');
+    plot(x_dub,y_dub,'r--')
+    grid on
+    axis equal
+    title(num2str(ii));
+    pause(3)
+
+    
+    length = dubinsGetPathLength(path);
+    costs(ii)=costs(ii)/length;
+    if costs(ii)>worst_cost
+        worst_path = path_re_opt;
+        xy_end_worst = xy_end;
+        theta_end_worst = theta_end;
+        worst_cost = costs(ii);
+    end
+end
+
+[x,y]=dubinsTransPolyDiscretizePath(worst_path);
+[x_dub,y_dub]=dubinsDiscretizePath(worst_path);
+
+figure(1);clf;
+plot(x,y);
+hold on
+plot(x_dub,y_dub,'r--')
+grid on
+axis equal
+
+figure(2);
+hist(costs,20)
+
+xy_end_worst
+theta_end_worst

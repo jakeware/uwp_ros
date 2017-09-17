@@ -1,0 +1,2 @@
+function theta = atan2Vec(vec)
+theta = atan2(vec(2),vec(1));

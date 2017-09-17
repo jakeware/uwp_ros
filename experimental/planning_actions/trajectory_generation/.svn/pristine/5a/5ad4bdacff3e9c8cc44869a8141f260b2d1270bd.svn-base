@@ -1,0 +1,71 @@
+function [t,roll,roll_rate,roll_accel,norm_accel,roll_lin] = dubinsTransPolyCoordinatedSimpleInvert(path,V)
+
+g=9.8;
+
+num_points = 1000;
+d_res = dubinsGetPathLength(path) / num_points;
+
+
+K = length(path);
+
+roll_segs=cell(1,K);
+roll_lin_segs=cell(1,K);
+roll_rate_segs=cell(1,K);
+roll_accel_segs = cell(1,K);
+norm_accel_segs = cell(1,K);
+t_segs = cell(1,K);
+
+seg_lengths = zeros(1,K);
+seg_path_times = zeros(1,K);
+
+
+for ii=1:length(path)
+        path_el = path{ii};
+        P=path_el.poly;
+        Pd = polyder(P);
+        Pdd = polyder(Pd);
+        Pddd = polyder(Pdd);
+        Pdddd = polyder(Pddd);
+        
+        d = 0:d_res:path_el.length;
+        curvature = path_el.curvature + polyval(Pdd,d);
+        g_rep_mat = repmat(g,1,length(d));
+        
+        roll_seg = -atan2(V^2*curvature,g_rep_mat);
+        roll_lin_seg = -V^2*curvature./g_rep_mat;
+        roll_rate_lin_seg = -V^3/g*polyval(Pddd,d);
+        roll_accel_lin_seg = -V^4/g*polyval(Pdddd,d);
+        norm_accel_seg = sqrt((V^2*curvature).^2+g_rep_mat.^2);
+        
+        roll_segs{ii}  = roll_seg;
+        roll_lin_segs{ii}=roll_lin_seg;
+        roll_rate_segs{ii} = roll_rate_lin_seg;
+        roll_accel_segs{ii} = roll_accel_lin_seg;
+        norm_accel_segs{ii} = norm_accel_seg;
+        seg_lengths(ii) = length(d);
+        seg_path_times(ii) = path_el.length / V;
+        t_segs{ii} = d/V;
+end
+
+ind_starts = cumsum(seg_lengths) - seg_lengths + 1;
+ind_ends = cumsum(seg_lengths);
+n_disc = ind_ends(end);
+
+roll=zeros(1,n_disc);
+roll_lin=zeros(1,n_disc);
+roll_rate=zeros(1,n_disc);
+roll_accel=zeros(1,n_disc);
+norm_accel=zeros(1,n_disc);
+t = zeros(1,n_disc);
+
+seg_path_start_times = cumsum(seg_path_times) - seg_path_times;
+
+for ii=1:K
+    roll(ind_starts(ii):ind_ends(ii)) = rad2deg(roll_segs{ii});
+    roll_lin(ind_starts(ii):ind_ends(ii)) = rad2deg(roll_lin_segs{ii});
+    roll_rate(ind_starts(ii):ind_ends(ii)) = rad2deg(roll_rate_segs{ii});
+    roll_accel(ind_starts(ii):ind_ends(ii)) = rad2deg(roll_accel_segs{ii});
+    norm_accel(ind_starts(ii):ind_ends(ii)) = norm_accel_segs{ii};
+    t(ind_starts(ii):ind_ends(ii)) = t_segs{ii}+seg_path_start_times(ii);
+end
+

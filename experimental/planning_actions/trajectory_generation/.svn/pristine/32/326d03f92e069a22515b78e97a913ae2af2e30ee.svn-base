@@ -1,0 +1,50 @@
+clear all;
+
+N = 8;
+D=4;
+K=3;
+t_final = 3;
+
+der_costs = zeros(1,N+1);
+der_costs(1)=1;
+der_costs(5)=1;
+
+% taus = rand(1,K);
+taus=linspace(.1,1,K).^2
+% taus = ones(1,K);
+
+taus = t_final*taus/sum(taus);
+
+taus
+
+gamma=cumsum(taus);
+
+
+
+der_offsets = zeros(D,K-1);
+
+
+der_0=[0,0];
+der_final=[1,0];
+
+
+[P,J] = poly_opt_piecewise_unit_rescale(N, taus, der_0, der_final, D, der_costs, der_offsets)
+
+
+P_copy = P;
+
+t=linspace(0,sum(taus),1000);
+
+n_der_to_plot=4;
+
+figure(1);clf;
+for ii=1:n_der_to_plot
+    subplot(n_der_to_plot,1,ii)
+    plot(t,polyval_pieceUR(P_copy,taus,t));
+    title(num2str(ii-1))
+    grid on
+    hold on
+    plot(gamma(1:end-1),zeros(1,K-1),'kx');
+    
+    P_copy = polyder_piece(P_copy);
+end

@@ -1,0 +1,65 @@
+function ceq = get_poly_const(P,path,D,trans_der_0,trans_der_final)
+
+K = length(path);
+
+N_poly = length(P)/K;
+
+% N_poly
+% K
+
+P = reshape(P,N_poly,K)';
+P=fliplr(P);
+
+trans_der_inits = zeros(D,K);
+trans_der_finals = zeros(D,K);
+
+for kk=1:K
+    tau=path{kk}.length;
+    curvature = path{kk}.curvature;
+    P_init = poly_get_derivatives(P(kk,:),0,D);
+    P_final = poly_get_derivatives(P(kk,:),tau,D);
+    trans_der_inits(:,kk) = get_normalized_path_derivatives(P_init,curvature);
+    trans_der_finals(:,kk) = get_normalized_path_derivatives(P_final,curvature);
+end
+
+N_init_constraints=length(trans_der_0); %number of constraints on the beginning of the polynomial
+N_final_constraints=length(trans_der_final); %number of constraints on the end of the polynomial
+if (N_init_constraints > D || N_final_constraints > D)
+    error('cant have more than D init or final constraints')
+end
+
+
+N_B=N_final_constraints+N_init_constraints+(K-1)*D; %number of constraints
+
+ceq=zeros(N_B,1);
+cineq=[];
+
+c_ind = 1;
+for cc=1:K+1
+    if (cc==1) %first constraint
+        ceq(c_ind:c_ind+N_init_constraints-1) = trans_der_inits(1:N_init_constraints,1) - trans_der_0;
+        c_ind = c_ind+N_init_constraints;
+    elseif (cc<=K) %continuity constraints
+        ceq(c_ind:c_ind+D-1) = trans_der_finals(:,cc-1)-trans_der_inits(:,cc);
+        c_ind = c_ind + D;
+    else
+        ceq(c_ind:c_ind+N_final_constraints-1) = trans_der_finals(:,cc-1)-trans_der_final;
+        c_ind = c_ind + N_final_constraints;
+    end      
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

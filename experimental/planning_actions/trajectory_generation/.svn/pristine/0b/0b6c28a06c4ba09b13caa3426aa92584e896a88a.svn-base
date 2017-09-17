@@ -1,0 +1,79 @@
+function [path,J] = dubinsTransPolyGetPath(path,der_costs,D,trans_der_0,trans_der_final,re_opt)
+
+K = length(path);
+taus = zeros(1,K);
+curvatures = zeros(1,K);
+
+N = length(der_costs)-1;
+
+for kk=1:K
+    curvatures(kk) = path{kk}.curvature;
+    taus(kk) = path{kk}.length;
+    path{kk}.taus = path{kk}.length; %TODO eliminate tau since everything is paramaterized by nominal length
+end
+
+der_offsets = zeros(D,K-1);
+
+if D>2
+   der_offsets(3,:) = -diff(curvatures)';
+end
+
+der_0_0 = get_poly_derivatives_from_normalized(trans_der_0,curvatures(1));
+der_final_final = get_poly_derivatives_from_normalized(trans_der_final,curvatures(end));
+
+% der_0_0 = zeros(D,1);
+% der_final_final = zeros(D,1);
+
+[P,J] = poly_opt_piecewise(N, taus, der_0_0, der_final_final, D, der_costs, der_offsets);
+
+
+if re_opt
+    drho_dtheta_joints = zeros(D,K-1);
+    for kk=1:K-1
+        
+        P_final_vec = poly_get_derivatives(P(kk,:),taus(kk),D);
+        P_0_vec = poly_get_derivatives(P(kk+1,:),0,D);
+        
+        prev_drho_dtheta = get_normalized_path_derivatives(P_final_vec,curvatures(kk));
+        next_drho_dtheta = get_normalized_path_derivatives(P_0_vec,curvatures(kk+1));
+        drho_dtheta_joints(:,kk) = (prev_drho_dtheta+next_drho_dtheta)/2;
+        
+        drho_dtheta_prev_next = [prev_drho_dtheta;next_drho_dtheta];
+        [trash,min_inds]=min(abs(drho_dtheta_prev_next));
+        
+        for dd=1:D
+            drho_dtheta_joints(dd,kk) = drho_dtheta_prev_next(min_inds(dd),dd);
+        end
+        
+        
+%         drho_dtheta_joints
+%         drho_dtheta_joints(2)=0;
+%         drho_dtheta_joints(3) = 0;
+%         drho_dtheta_joints(4)=0;
+    end
+
+    
+
+    
+    joint_vec0 = drho_dtheta_joints(:);
+    
+%     jointCostsAnon = @(joint_vec)dubinsTransPolyJointsCost(joint_vec,D,curvatures,taus,der_0_0,der_final_final,der_costs);
+% 
+%     options = optimset('TolX',1e-8,'TolFun',1e-12,'Display','iter-detailed'); % run interior-point algorithm
+%     opt_joint_vec = fminunc(jointCostsAnon,joint_vec0,options);
+
+    opt_joint_vec = joint_vec0;
+     [J,P] = dubinsTransPolyJointsCost(opt_joint_vec,D,curvatures,taus,der_0_0,der_final_final,der_costs);
+    
+    for kk=1:K
+        path{kk}.poly = P(kk,:);
+    end
+
+else 
+    for kk=1:K
+        path{kk}.poly = P(kk,:);
+    end
+end
+
+
+

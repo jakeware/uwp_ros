@@ -1,0 +1,52 @@
+function [d,xy,xyd,xydd,xyddd,theta_int,dubins_curvature] = dubinsTransPolyDiscretizePathUniform(path, ds)
+
+
+kk=1;
+theta = 0;
+ended = 0;
+
+N_d = 0;
+
+while ~ended
+    [kk,theta,ended] = dubinsTransPolyAdvanceCarrot(path,kk,theta,ds);
+    N_d = N_d+1;
+end
+
+d = zeros(1,N_d);
+xy = zeros(2,N_d);
+xyd = zeros(2,N_d);
+xydd = zeros(2,N_d);
+xyddd = zeros(2,N_d);
+
+theta_int = zeros(1,N_d);
+dubins_curvature = zeros(1,N_d);
+kk=1;
+
+theta_accum = 0;
+theta = 0;
+prev_kk = 1;
+
+
+for ii=1:N_d
+    rho_vecs = dubinsTransPolyXY(path,kk,theta,4);
+    xy(:,ii)=rho_vecs(:,1);
+    xyd(:,ii)=rho_vecs(:,2);
+    xydd(:,ii)=rho_vecs(:,3);
+    xyddd(:,ii)=rho_vecs(:,4);
+    d(ii)=ii*ds;
+    
+    if prev_kk~=kk
+        theta_accum = theta_accum + path{kk-1}.length;
+    end
+    prev_kk = kk;
+    theta_int(ii) = theta + theta_accum;   
+    dubins_curvature(ii) = path{kk}.curvature;
+    
+    [kk,theta,ended] = dubinsTransPolyAdvanceCarrot(path,kk,theta,ds);
+end
+% %hack to stop it from running over the end
+% theta_int(end) = theta_int(end-1);
+
+
+    
+        

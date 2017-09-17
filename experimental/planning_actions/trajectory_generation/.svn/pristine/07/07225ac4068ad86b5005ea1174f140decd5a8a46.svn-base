@@ -1,0 +1,41 @@
+function [x,y] = dubinsDiscretizePath(path)
+num_points = 10000;
+d_res = dubinsGetPathLength(path) / num_points;
+
+
+K = length(path);
+x_segs=cell(1,K);
+y_segs=cell(1,K);
+seg_lengths = zeros(1,K);
+
+for ii=1:length(path)
+    if (path{ii}.type == 0)
+        line = path{ii};
+        d = 0:d_res:line.length;
+        x_seg = line.start_pt(1)+line.unit_vec(1)*d;
+        y_seg = line.start_pt(2)+line.unit_vec(2)*d;
+    else 
+        arc = path{ii};
+        d = 0:d_res:arc.length;
+        thetas = arc.ccw*d/arc.R + arc.start_angle;
+        x_seg = arc.R*cos(thetas)+arc.center(1);
+        y_seg = arc.R*sin(thetas)+arc.center(2);
+    end
+    x_segs{ii} = x_seg;
+    y_segs{ii} = y_seg;     
+    seg_lengths(ii) = length(x_seg);
+end
+
+ind_starts = cumsum(seg_lengths) - seg_lengths + 1;
+ind_ends = cumsum(seg_lengths);
+n_disc = ind_ends(end);
+
+x=zeros(1,n_disc);
+y=zeros(1,n_disc);
+
+
+for ii=1:K
+    x(ind_starts(ii):ind_ends(ii)) = x_segs{ii};
+    y(ind_starts(ii):ind_ends(ii)) = y_segs{ii};
+end
+        

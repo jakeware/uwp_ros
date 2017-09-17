@@ -1,0 +1,2 @@
+function u = angleToVec(theta)
+u=[cos(theta);sin(theta)];

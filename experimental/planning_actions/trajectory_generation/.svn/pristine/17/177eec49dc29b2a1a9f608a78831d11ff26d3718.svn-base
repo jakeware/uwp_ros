@@ -1,0 +1,88 @@
+function path = dubinsGetPathWord(R,xy_start,theta_start,xy_end,theta_end,L)
+
+
+start_arc_start_angle = theta_start - L(1) * pi / 2;
+end_arc_end_angle = theta_end - L(3) * pi / 2;
+start_arc_center = xy_start - R * angleToVec(start_arc_start_angle);
+end_arc_center = xy_end - R * angleToVec(end_arc_end_angle);
+
+arc_center_to_center = end_arc_center - start_arc_center;
+d_center_to_center = norm(arc_center_to_center);
+angle_center_to_center = atan2Vec(arc_center_to_center);
+
+if (L(1) == L(3) && d_center_to_center < .0001)
+    arc = dubinsNewArc(start_arc_center, R, start_arc_start_angle, end_arc_end_angle, L(1));
+    path = {arc};
+    return;
+end
+
+
+if (L(2) ~= 0)
+    
+    if (d_center_to_center > 4 * R)  %if the arc centers are more than 2 diameters apart, we can't make a path
+        path = {};
+        return;
+    end
+    
+    start_end_sweep = acos(d_center_to_center / 2 / (2 * R));
+    
+    
+    middle_arc = cell(1,2);
+    start_arc = cell(1,2);
+    end_arc= cell(1,2);
+    lengths = zeros(1,2);
+    
+    s =  [1, -1];
+    for ii = 1:2
+        start_arc_end_angle = angle_center_to_center - s(ii) * L(1) * start_end_sweep;
+        middle_arc_center = start_arc_center + 2 * R * angleToVec(start_arc_end_angle);
+        middle_arc_start_angle = start_arc_end_angle + pi;
+        end_arc_start_angle = angle_center_to_center + s(ii) * L(3) * start_end_sweep + pi;
+        middle_arc_end_angle = end_arc_start_angle + pi;
+        
+        start_arc{ii} = dubinsNewArc(start_arc_center, R, start_arc_start_angle, start_arc_end_angle, L(1));
+        middle_arc{ii} = dubinsNewArc(middle_arc_center, R, middle_arc_start_angle, middle_arc_end_angle, L(2));
+        end_arc{ii} = dubinsNewArc(end_arc_center, R, end_arc_start_angle, end_arc_end_angle, L(3));
+        
+        lengths(ii) = start_arc{ii}.length + middle_arc{ii}.length + end_arc{ii}.length;
+    end
+    
+    
+    if (lengths(1) < lengths(2))
+        use_ind = 1;
+    else
+        use_ind = 2;
+    end
+    
+    path = {start_arc{use_ind},middle_arc{use_ind},end_arc{use_ind}};
+    
+    
+else
+    if (L(1) == L(3))
+        
+        start_arc_end_angle = angle_center_to_center - L(1) * pi/2;
+        end_arc_start_angle = start_arc_end_angle;
+        
+    else
+        
+        %if the arcs overlap this won't work
+        if (2 * R > d_center_to_center)
+            path = {};
+            return;
+        end
+        
+        radius_sum_angle = asin(2 * R / d_center_to_center);
+        start_arc_end_angle = angle_center_to_center - L(1) * ((pi/2) - radius_sum_angle);
+        end_arc_start_angle = angle_center_to_center - L(3) * ((pi/2) + radius_sum_angle);
+    end
+    
+    start_arc = dubinsNewArc(start_arc_center, R, start_arc_start_angle, start_arc_end_angle, L(1));
+    end_arc = dubinsNewArc(end_arc_center, R, end_arc_start_angle, end_arc_end_angle, L(3));
+    
+    line_start = start_arc.end_pt;
+    line_end = end_arc.start_pt;
+    middle_line = dubinsNewLine(line_start, line_end);
+    path = {start_arc,middle_line,end_arc};
+    
+end
+

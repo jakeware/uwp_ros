@@ -1,0 +1,18 @@
+function [y,P_ind] = polyval_pieceUR(P,taus,t)
+Gamma = cumsum(taus);
+
+N_T=length(t);
+y=zeros(size(t));
+
+for tt=1:N_T
+    P_ind = find(t(tt)<=Gamma,1,'first');
+    if isempty(P_ind)
+        t(tt)
+        Gamma(end)
+        error('t outside of taus range');
+    end
+    
+    tval = t(tt)-Gamma(P_ind)+taus(P_ind);
+    tval = tval/taus(P_ind);
+    y(tt) = polyval(P(P_ind,:),tval);
+end

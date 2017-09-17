@@ -1,0 +1,89 @@
+function [path,J] = dubinsTransPolyGetPathUR(path,der_costs,D,trans_der_0,trans_der_final,re_opt)
+
+K = length(path);
+taus = zeros(1,K);
+curvatures = zeros(1,K);
+
+N = length(der_costs)-1;
+
+for kk=1:K
+    curvatures(kk) = path{kk}.curvature;
+    taus(kk) = path{kk}.length;
+    path{kk}.taus = path{kk}.length; %TODO eliminate tau since everything is paramaterized by nominal length
+end
+
+der_offsets = zeros(D,K-1);
+
+if D>2
+   der_offsets(3,:) = -diff(curvatures)';
+end
+
+der_0_0 = get_poly_derivatives_from_normalizedUR(trans_der_0,curvatures(1),taus(1));
+der_final_final = get_poly_derivatives_from_normalizedUR(trans_der_final,curvatures(end),taus(end));
+
+% der_0_0 = zeros(D,1);
+% der_final_final = zeros(D,1);
+
+[P,J] = poly_opt_piecewise_unit_rescale(N, taus, der_0_0, der_final_final, D, der_costs, der_offsets);
+
+if re_opt
+    drho_dtheta_joints = zeros(D,K-1);
+    
+    
+%         segment_start_trans_axial_derivatives = zeros(D,K);
+%         segment_end_trans_axial_derivatives = zeros(D,K);
+    
+    for kk=1:K-1
+        
+        P_final_vec = poly_get_derivatives(P(kk,:),1,D);
+        P_0_vec = poly_get_derivatives(P(kk+1,:),0,D);
+        
+       
+        prev_drho_dtheta = get_normalized_path_derivativesUR(P_final_vec,curvatures(kk),taus(kk));
+        next_drho_dtheta = get_normalized_path_derivativesUR(P_0_vec,curvatures(kk+1),taus(kk+1));
+        drho_dtheta_joints(:,kk) = (prev_drho_dtheta+next_drho_dtheta)/2;
+
+%         segment_start_trans_axial_derivatives(:,kk) = next_drho_dtheta;
+%         segment_end_trans_axial_derivatives(:,kk) = prev_drho_dtheta;
+%         drho_dtheta_joints
+%         drho_dtheta_joints(2)=0;
+%         drho_dtheta_joints(3) = 0;
+%         drho_dtheta_joints(4)=15
+    end
+
+    
+    joint_vec = drho_dtheta_joints(:);
+    
+    [J,P] = dubinsTransPolyJointsCostUR(joint_vec,D,curvatures,taus,der_0_0,der_final_final,der_costs);
+%     j=zeros(1,K);
+%     for kk=1:K
+%         
+%         if kk>1
+%             der_0 = get_poly_derivatives_from_normalized(drho_dtheta_joints(:,kk-1),curvatures(kk));
+%         else
+%             der_0 = der_0_0;
+% %             der_0 = zeros(D,1);
+%         end
+%         
+%         if kk<K
+%             der_final = get_poly_derivatives_from_normalized(drho_dtheta_joints(:,kk),curvatures(kk));
+%         else
+%             der_final = der_final_final;
+% %             der_final = zeros(D,1);
+%         end
+%         [path{kk}.poly,j(kk)] = poly_opt_single(N, taus(kk), der_0, der_final, der_costs);
+%     end
+%     J=sum(j);
+
+    for kk=1:K
+        path{kk}.poly = P(kk,:);
+    end
+
+else 
+    for kk=1:K
+        path{kk}.poly = P(kk,:);
+    end
+end
+
+
+

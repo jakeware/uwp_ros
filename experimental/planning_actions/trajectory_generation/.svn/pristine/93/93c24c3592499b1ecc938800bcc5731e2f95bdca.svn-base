@@ -1,0 +1,16 @@
+function path = dubinsGetPath(R,xy_start,theta_start,xy_end,theta_end)
+words = [ -1, 1, -1 ;  1, -1, 1 ;  1, 0, 1 ;  -1, 0, -1 ;  -1, 0, 1 ;  1, 0, -1 ];
+  lengths = zeros(1,6);
+  paths = cell(1,6);
+
+  for ii = 1:6
+    paths{ii} = dubinsGetPathWord(R, xy_start, theta_start, xy_end, theta_end, words(ii,:));
+    lengths(ii) = dubinsGetPathLength(paths{ii});
+    if isempty(paths{ii})
+        lengths(ii) = inf;
+    end
+  end
+  
+  [min_length,min_ind]=min(lengths);
+  path = paths{min_ind};
+  path = dubinsRemoveZeroElements(path);

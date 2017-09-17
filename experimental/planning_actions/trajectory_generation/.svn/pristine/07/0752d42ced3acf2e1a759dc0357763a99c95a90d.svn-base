@@ -1,0 +1,68 @@
+function Pderiv = get_poly_derivatives_from_normalized(norm_deriv,curvature)
+D=length(norm_deriv);
+
+
+if curvature>0
+    Psign = -1;
+else
+    Psign = 1;
+end
+
+norm_deriv = Psign*norm_deriv;
+rho = norm_deriv(1);    
+
+if D>1
+    drho_ds = norm_deriv(2);
+else
+    drho_ds = 0;
+end
+if D>2
+    drho2_ds2 = norm_deriv(3);
+else
+    drho2_ds2 = 0;
+end
+if D>3
+    drho3_ds3 = norm_deriv(4);
+else
+    drho3_ds3 = 0;
+end
+
+
+if curvature~=0
+    R_0 = abs(1/curvature);
+    R = R_0+rho;
+    P = rho;
+    Pd = drho_ds*R/sqrt(1-drho_ds^2);
+    L = sqrt(R^2+Pd^2);
+    Pdd = (drho2_ds2+R/L^2+R*Pd^2/L^4)/(1/L^2-Pd^2/L^4);
+    Pddd = (drho3_ds3-(-3*Pd/L^3-4*Pd*Pdd^2/L^5+3*Pd*R^2/L^5-Pd*Pdd*R/L^5-Pd^3/L^5+4*Pd^3*(Pdd+R)^2/L^7))/...
+        (1/L^3-Pd^2/L^5);
+    
+    %scaling corrections since the above are derived paramaterized by
+    %theta, not theta/R_0
+    Pd = Pd/R_0;
+    Pdd = Pdd/R_0^2;
+    Pddd = Pddd/R_0^3;
+else
+    P=rho;
+    Pd = drho_ds/sqrt(1-drho_ds^2);
+    L = sqrt(1+Pd^2);
+    Pdd = drho2_ds2/(1/L^2-Pd^2/L^4);
+    Pddd = (drho3_ds3-(-4*Pd*Pdd^2/L^5+4*Pd^3*Pdd^2/L^7))/(1/L^3-Pd^2/L^5);
+end
+
+
+Pderiv = zeros(size(norm_deriv));
+
+Pderiv(1)=P;
+if D>1
+    Pderiv(2) = Pd;
+end
+if D>2
+    Pderiv(3) = Pdd;
+end
+if D>3
+    Pderiv(4) = Pddd;
+end
+
+Pderiv = Pderiv*Psign;

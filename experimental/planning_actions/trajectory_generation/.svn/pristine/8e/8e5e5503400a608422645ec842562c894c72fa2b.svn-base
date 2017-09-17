@@ -1,0 +1,131 @@
+function [P,J] = poly_opt_piecewise_unit_rescale(...
+    N, taus, der_0, der_final, D, der_costs, der_offsets)
+% p = poly_opt_single(N, der_0, der_final, der_costs)
+% N, degree of polynomials to optimize
+% der_0, derivative vector of constraints at beginning, der_0(1) = polynomial, der_0(2) =
+%   first derivative, etc
+% der_final, derivative vector of constraints at end
+% der_costs, cost vector to be applied to squared derivatives (indexed the
+%   same as constraints
+% D, order of continuity to be enforced between piecewise segments
+% der_offsets, continuity offsets in derivatives (defaults to 0 offset)
+
+
+
+N_poly = N+1; %number of terms in polynomial vector
+if (length(der_costs)~=N_poly)
+    error('must specify cost for each dervative including 0th (N+1)');
+end
+
+
+
+K=length(taus);
+if (nargin<7)
+    der_offsets = zeros(D,K-1);
+end
+
+
+if (size(der_offsets,1)~=D || size(der_offsets,2)~=(K-1))
+    der_offsets
+    D
+    K
+    error('wrong size der_offsets or length(taus)');
+end
+
+N_init_constraints=length(der_0); %number of constraints on the beginning of the polynomial
+N_final_constraints=length(der_final); %number of constraints on the end of the polynomial
+N_B=N_final_constraints+N_init_constraints+(K-1)*D; %number of constraints
+N_K = K*N_poly; %number of parameters to optimize
+N_R=N_K-N_B; %number of free parameters
+
+if (N_R<0)
+    K
+    N_B 
+    N_K
+    N_R
+    error('overconstrained');
+end
+
+A=zeros(N_B,N_K);
+Q=zeros(N_K);
+b=zeros(N_B,1);
+
+
+poly_inds_base=1:N_poly;
+
+p_ind_blocks = cell(1,K);
+
+length_scales_exponent = 0:N;
+
+for kk=1:K
+    p_ind_blocks{kk} = poly_inds_base + (kk-1)*N_poly;
+    der_costs_kk = der_costs./taus(kk).^length_scales_exponent;
+    Q_kk = poly_opt_single_cost_mat(N, 1, der_costs_kk)*taus(kk);
+    Q(p_ind_blocks{kk},p_ind_blocks{kk}) = Q_kk;
+end
+
+
+N_constraint_blocks = 1+K;
+continuity_constraint_inds_base = 1:D;
+
+constraint_ind_blocks=cell(1,N_constraint_blocks);
+for cc=1:N_constraint_blocks
+%     p_init_inds = (cc-1)*N_poly + poly_inds_base; now p_ind_block{cc}
+%     p_final_inds = (cc-2)*N_poly + poly_inds_base; now p_ind_block{cc-1}
+    
+    if (cc==1) %first constraint
+        constraint_ind_blocks{cc} = 1:N_init_constraints;
+        A_init_0 = poly_opt_single_constraint_init_mat(N, N_init_constraints,taus(cc));
+        A(constraint_ind_blocks{cc},p_ind_blocks{cc}) = A_init_0;
+        b(constraint_ind_blocks{cc}) = der_0;
+    elseif (cc<N_constraint_blocks) %continuity constraints
+        constraint_ind_blocks{cc} = N_init_constraints + (cc-2) * D + continuity_constraint_inds_base;
+        A_init_cc = poly_opt_single_constraint_init_mat(N, D,taus(cc-1));
+        A_final_cc = poly_opt_single_constraint_final_mat(N, D, 1,taus(cc-1));
+        A(constraint_ind_blocks{cc},p_ind_blocks{cc}) =  A_init_cc;
+        A(constraint_ind_blocks{cc},p_ind_blocks{cc-1}) = -A_final_cc;
+        b(constraint_ind_blocks{cc}) = der_offsets(:,cc-1);
+    else
+        constraint_ind_blocks{cc} = N_init_constraints + (cc-2) * D + (1:N_final_constraints);
+        A_final_cc = poly_opt_single_constraint_final_mat(N, N_final_constraints, 1,taus(cc-1));
+        A(constraint_ind_blocks{cc},p_ind_blocks{cc-1}) = -A_final_cc;
+        b(constraint_ind_blocks{cc}) = -der_final;
+    end      
+end
+
+%number of extra polynomial parameters that can't be elminated by taking D from each kk
+N_extra_constraints = N_init_constraints + N_final_constraints - D;
+
+[index_kk_to_BR, index_BR_to_kk] = ...
+    poly_opt_piece_BR_index_maps(N_extra_constraints,D,N_poly,K);
+
+A_BR = A(:,index_kk_to_BR);
+Q_BR = Q(index_kk_to_BR,index_kk_to_BR);
+
+x_star_BR = QP_elimination_solve(Q_BR,A_BR,b);
+
+
+x_star = x_star_BR(index_BR_to_kk);
+
+% x_star = quadprog(Q,[],[],[],A,b);
+
+P=reshape(x_star,N_poly,K)';
+
+J=.5*x_star'*Q*x_star;
+P=fliplr(P);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

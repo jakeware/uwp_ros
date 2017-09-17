@@ -1,0 +1,6 @@
+function rho_vecs = dubinsTransPolyTR(path,path_ind,theta,D)
+
+Pderiv = poly_get_derivatives(path{path_ind}.poly,theta,D);
+[norm_deriv_rhat,norm_deriv_that] = get_normalized_path_derivatives(Pderiv,path{path_ind}.curvature);
+rho_vecs = [norm_deriv_that;norm_deriv_rhat];
+

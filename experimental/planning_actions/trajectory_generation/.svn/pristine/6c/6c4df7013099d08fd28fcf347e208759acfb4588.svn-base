@@ -1,0 +1,46 @@
+function [t,roll,norm_accel] = dubinsCoordinatedSimpleInvert(path,V)
+
+g=9.8;
+
+K = length(path);
+
+roll_segs=cell(1,K);
+norm_accel_segs = cell(1,K);
+t_segs = cell(1,K);
+
+seg_lengths = zeros(1,K);
+seg_path_times = zeros(1,K);
+
+
+for ii=1:length(path)
+        path_el = path{ii};
+               
+        curvature = repmat(path_el.curvature,1,2);
+        g_rep_mat = repmat(g,1,2);
+        
+        roll_seg = -atan2(V^2*curvature,g_rep_mat);
+        norm_accel_seg = sqrt((V^2*curvature).^2+g_rep_mat.^2);
+        
+        roll_segs{ii}  = roll_seg;
+        norm_accel_segs{ii} = norm_accel_seg;
+        seg_lengths(ii) = 2;
+        seg_path_times(ii) = path_el.length / V;
+        t_segs{ii} = [0,path_el.length/V];
+end
+
+ind_starts = cumsum(seg_lengths) - seg_lengths + 1;
+ind_ends = cumsum(seg_lengths);
+n_disc = ind_ends(end);
+
+roll=zeros(1,n_disc);
+norm_accel=zeros(1,n_disc);
+t = zeros(1,n_disc);
+
+seg_path_start_times = cumsum(seg_path_times) - seg_path_times;
+
+for ii=1:K
+    roll(ind_starts(ii):ind_ends(ii)) = rad2deg(roll_segs{ii});
+    norm_accel(ind_starts(ii):ind_ends(ii)) = norm_accel_segs{ii};
+    t(ind_starts(ii):ind_ends(ii)) = t_segs{ii}+seg_path_start_times(ii);
+end
+

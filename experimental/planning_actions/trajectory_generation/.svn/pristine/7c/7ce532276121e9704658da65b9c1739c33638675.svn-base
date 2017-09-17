@@ -1,0 +1,101 @@
+function [dx,inputs] = coordinatedAirplaneModelCLPath(x,xyz_desired,xyzd_desired,xyzdd_desired,xyzddd_desired,at,controlled)
+persistent K_lqr
+
+if isempty(K_lqr)
+    I3=eye(3);
+    z3=zeros(3);
+    A=[z3,I3,z3;z3,z3,I3;z3,z3,z3];
+    B=[z3;z3;I3];
+    
+    Rxx=1000*diag([1,1,1,0,0,0,0,0,0]);
+    Ruu=eye(3);
+    
+    K_lqr=lqr(A,B,Rxx,Ruu);
+%     
+%     Kdd_to_roll = 
+%     Kd_to_roll = 
+%     K_to_roll = 
+%     
+%     Kdd_to_and = 
+%     Kd_to_and = 
+%     K_to_and
+    
+end
+
+if controlled
+    K=K_lqr;
+else
+    K=zeros(size(K_lqr));
+end
+
+gbar=[0 0 -9.8]';
+p=x(1:3,1); %position vector
+v=x(4:6,1); %velocity vector
+n=x(7:9,1); %unit normal vector (points up in body frame) we can just integrate this since the rest of the matrix is implied
+an=x(10,1); %normal acceleration
+
+%path paremeters and derivatives
+s=x(11,1);
+ds=x(12,1);
+dds=x(13,1);
+% if ds<.1 && dds<0
+%     dds=0;
+% end
+
+
+e1=v/norm(v);
+e3=n/norm(n);
+e2=cross(e3,e1);
+R=[e1,e2,e3];
+dp=v;
+dv=gbar+R*[at;0;an];
+
+aux=(R'*dv/norm(v));
+omega2=-aux(3);
+omega3=aux(2);
+
+ddp=an*e3+at*e1+gbar;
+
+e=xyz_desired-p;
+de=xyzd_desired*ds-dp;
+dde=xyzdd_desired*ds^2+xyzd_desired*dds-ddp;
+
+e_b = R'*e;
+de_b = R'*de;
+dde_b = R'*dde;
+dddp_controlled = R*K*[e_b;de_b;dde_b];
+
+% e_b = e;
+% de_b = de;
+% dde_b = dde;
+% dddp_controlled = K*[e_b;de_b;dde_b];
+
+%implements eq. 11 in Aggressive Flight Maneuvers for Path Following
+M=[R'*xyzd_desired,[0;an;0],[0;0;-1]];
+% dddp_controlled = R*K*[e_b;de_b;dde_b]
+
+dddp_feedforward = 3*xyzdd_desired*dds*ds+xyzddd_desired*ds^3;
+dddp=dddp_feedforward+dddp_controlled;
+dat=0;%unless we have better information, this should be reasonable
+inputs=M\([omega2*an+dat;omega3*at;-omega2*at]-R'*dddp);
+
+% path_angle = atan2(norm(cross(e1,xyzd_desired)),dot(e1,xyzd_desired));
+
+
+ddds=inputs(1);
+omega1=inputs(2);
+dan=inputs(3);
+
+% if ds<.1 && dds<0
+%     dds=0;
+% end
+
+
+
+dn=R*[omega2;-omega1;0];
+dx=[dp;dv;dn;dan;ds;dds;ddds];
+
+
+if ddds>150
+    disp('oops')
+end
